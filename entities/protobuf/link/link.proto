@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+enum LinkType {
+     LINK_TYPE_INTER_SATELLITE_LINK = 0;
+     LINK_TYPE_GROUND_SATELLITE_LINK = 1;
+}
+
+message Link {
+    LinkType type = 1; // 链路类型
+    int32 link_id = 2; // 节点的 id
+    int32 source_node_id = 3; // 源节点 id
+    int32 target_node_id = 4; // 目的节点 id
+    string source_iface_name = 5; // 源接口的名称
+    string target_iface_name = 6; // 目标接口名称
+    float bandwidth = 7; // 带宽
+    float delay = 8;  // 延迟
+}
