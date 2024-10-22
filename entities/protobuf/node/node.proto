@@ -12,4 +12,7 @@ message Node {
      int32 pid = 4;
      repeated string tle = 5;
      repeated string interface_delay = 6;
+     float latitude = 7;
+     float longitude = 8;
+     float altitude = 9;
 }

@@ -51,7 +51,7 @@ class System:
         # 遍历所有的卫星进行更新
         for satellite in self.satellites:
             # 更新卫星的延迟
-            self.etcd_client.update_satellite_delay(satellite)
+            self.etcd_client.update_satellite_delay_and_position(satellite)
 
     def update(self):
         """

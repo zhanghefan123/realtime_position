@@ -4,6 +4,7 @@ from entities.link import link as lkm
 from entities.protobuf.link import link_pb2 as lpb
 from entities.protobuf.node import node_pb2 as npb
 from entities.node import node as nm
+from entities.vars import consts as cm
 from typing import List
 
 
@@ -75,7 +76,7 @@ class EtcdClient:
         self.etcd_client.put(f"{self.config_loader.etcd_isls_prefix}/{inter_satellite_link.link_id}",
                              linkPb.SerializeToString())
 
-    def update_satellite_delay(self, satellite: nm.Node):
+    def update_satellite_delay_and_position(self, satellite: nm.Node):
         """
         进行节点的延迟的更新
         :return:
@@ -86,6 +87,9 @@ class EtcdClient:
         pbSatellite.container_name = satellite.container_name
         pbSatellite.pid = satellite.pid
         pbSatellite.tle.extend(satellite.tle)
+        pbSatellite.latitude = satellite.current_position[cm.LATITUDE_KEY]
+        pbSatellite.longitude = satellite.current_position[cm.LONGITUDE_KEY]
+        pbSatellite.altitude = satellite.current_position[cm.ALTITUDE_KEY]
         interface_delays = []
         # interface_delay_map 的 key 是接口的名称而 value 是接口的延迟
         for interfaceName in satellite.interface_delay_map.keys():
