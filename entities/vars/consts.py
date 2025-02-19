@@ -14,3 +14,14 @@ S_TO_MS = 1000
 
 # 地球半径
 R_EARTH = 6371000
+
+# 节点类型以及链路类型
+NodeTypeSatellite = 0
+NodeTypeGroundStation = 1
+
+LinkTypeISL = 0
+LinkTypeGSL = 1
+
+# 前缀
+SatellitePrefix = "ns"
+GroundStationPrefix = "gs"

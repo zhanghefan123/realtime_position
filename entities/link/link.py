@@ -1,21 +1,24 @@
-import math
-from entities.node import node as nm
+from entities.node import common_info as cim
 from entities.vars import consts as cm
+from tools.tools import calculate_distance
 
 
 class Link:
     def __init__(self, link_type,
                  link_id: int,
                  band_width: float,
-                 source_node: nm.Node,
-                 target_node: nm.Node,
+                 source_node: cim.CommonInfo,
+                 target_node: cim.CommonInfo,
                  source_iface_name: str,
                  target_iface_name: str):
         """
         初始化链路
         :param link_type: 链路类型
+        :param link_id: 链路 ID
         :param source_node: 源节点
         :param target_node: 目的节点
+        :param source_iface_name: 源节点接口名
+        :param target_iface_name: 目的接口名
         """
         # ------ 初始化的属性 ------
         self.link_type = link_type
@@ -37,18 +40,7 @@ class Link:
         计算两个点之间的距离
         :return:
         """
-        source_position = self.source_node.current_position
-        target_position = self.target_node.current_position
-        z1 = (source_position[cm.ALTITUDE_KEY] + cm.R_EARTH) * math.sin(source_position[cm.LATITUDE_KEY])
-        base1 = (source_position[cm.ALTITUDE_KEY] + cm.R_EARTH) * math.cos(source_position[cm.LATITUDE_KEY])
-        x1 = base1 * math.cos(source_position[cm.LONGITUDE_KEY])
-        y1 = base1 * math.sin(source_position[cm.LONGITUDE_KEY])
-        z2 = (target_position[cm.ALTITUDE_KEY] + cm.R_EARTH) * math.sin(target_position[cm.LATITUDE_KEY])
-        base2 = (target_position[cm.ALTITUDE_KEY] + cm.R_EARTH) * math.cos(target_position[cm.LATITUDE_KEY])
-        x2 = base2 * math.cos(target_position[cm.LONGITUDE_KEY])
-        y2 = base2 * math.sin(target_position[cm.LONGITUDE_KEY])
-        distance_in_meters = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2)
-        self.distance_in_meters = distance_in_meters
+        return calculate_distance(self.source_node, self.target_node)
 
     def update_delay(self):
         """

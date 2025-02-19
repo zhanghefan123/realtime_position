@@ -13,45 +13,26 @@ class Loader:
         self.etcd_addr: str = ""  # etcd 监听地址
         self.etcd_port: int = 0  # etcd 监听端口
         self.etcd_isls_prefix: str = ""  # etcd 星间链路前缀
+        self.etcd_gsls_prefix: str = ""  # etcd 星地链路前缀
         self.etcd_satellites_prefix: str = ""  # etcd 卫星前缀
+        self.etcd_ground_stations_prefix: str = ""  # etcd 地面站前缀
         self.constellation_start_time = None  # 星座启动时间
         self.position_update_interval = None  # 更新时间
 
     def load_from_env(self):
         """
-        从环境变量之中进行配置的加载
+        从环境变量之中进行配置的加载, 下列这些参数在创建容器的时候都被设置为了环境变量
         :return:
         """
         self.etcd_addr = os.getenv("ETCD_LISTEN_ADDR")
         self.etcd_port = int(os.getenv("ETCD_CLIENT_PORT"))
         self.etcd_isls_prefix = os.getenv("ETCD_ISLS_PREFIX")
+        self.etcd_gsls_prefix = os.getenv("ETCD_GSLS_PREFIX")
         self.etcd_satellites_prefix = os.getenv("ETCD_SATELLITES_PREFIX")
+        self.etcd_ground_stations_prefix = os.getenv("ETCD_GROUND_STATIONS_PREFIX")
         self.constellation_start_time = os.getenv("CONSTELLATION_START_TIME")
         self.resolve_constellation_start_time()
         self.position_update_interval = int(os.getenv("UPDATE_INTERVAL"))
-
-    # def load(self):
-    #     """
-    #     进行配置的加载
-    #     """
-    #     # 1. 打开文件并使用 yaml 库进行解析
-    #     with open(file=self.config_file_path, mode='r', encoding="utf-8") as f:
-    #         content = f.read()
-    #         config_data = yaml.load(content, Loader=yaml.FullLoader)
-    #
-    #     # 2. etcd 配置
-    #     self.etcd_addr = config_data["network_config"]["local_network_address"]
-    #     etcd_config = config_data["services_config"]["etcd_config"]
-    #     self.etcd_port = int(etcd_config["client_port"])
-    #
-    #     self.etcd_isls_prefix = etcd_config["etcd_prefix"]["isls_prefix"]
-    #     self.etcd_satellites_prefix = etcd_config["etcd_prefix"]["satellites_prefix"]
-    #
-    #     # 3. 加载星座配置
-    #     self.constellation_start_time = config_data["constellation_config"]["start_time"]
-    #
-    #     # 4. 解析启动时间
-    #     self.resolve_constellation_start_time()
 
     def resolve_constellation_start_time(self):
         """
