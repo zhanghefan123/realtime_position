@@ -18,6 +18,7 @@ class Loader:
         self.etcd_ground_stations_prefix: str = ""  # etcd 地面站前缀
         self.constellation_start_time = None  # 星座启动时间
         self.position_update_interval = None  # 更新时间
+        self.satellite_available_gsls: int = 0  # 卫星可用于星地链路的接口的数量
 
     def load_from_env(self):
         """
@@ -33,6 +34,7 @@ class Loader:
         self.constellation_start_time = os.getenv("CONSTELLATION_START_TIME")
         self.resolve_constellation_start_time()
         self.position_update_interval = int(os.getenv("UPDATE_INTERVAL"))
+        self.satellite_available_gsls = int(os.getenv("SATELLITE_AVAILABLE_GSLS"))
 
     def resolve_constellation_start_time(self):
         """
