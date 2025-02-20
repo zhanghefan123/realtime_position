@@ -1,6 +1,4 @@
 import math
-from os import close
-
 from entities.vars import consts as cm
 from entities.node import ground_station as gm
 from entities.node import satellite as sm
@@ -9,6 +7,7 @@ from typing import List
 from service.etcd import api as eam
 from config import loader as lm
 from tools import tools as tm
+from queue import Queue
 
 
 class MaintainSystem:
@@ -16,7 +15,8 @@ class MaintainSystem:
                  etcd_api: eam.EtcdApi,
                  satellites: List[sm.Satellite],
                  ground_stations: List[gm.GroundStation],
-                 isls: List[lkm.Link]):
+                 isls: List[lkm.Link],
+                 sync_queue: Queue):
         """
         进行系统的初始化
         :param config_loader: 配置加载对象
@@ -29,13 +29,14 @@ class MaintainSystem:
         self.satellites = satellites
         self.ground_stations = ground_stations
         self.isls = isls
+        self.time_step = 1
+        self.sync_queue = sync_queue
 
     def update(self):
         """
         更新位置以及延迟
         :return:
         """
-        print("update main function", flush=True)
         # 进行所有卫星位置的更新
         self.update_satellites_position()
         # 进行所有的星间链路的更新
@@ -50,10 +51,16 @@ class MaintainSystem:
         进行卫星的位置的更新
         :return: None
         """
+        # 选择的步长 -> 越大卫星运动的越快
+        try:
+            time_step_tmp = self.sync_queue.get(block=False)
+            self.time_step = time_step_tmp
+        except Exception as e:
+            pass
         # 遍历每个卫星
         for satellite in self.satellites:
             # 进行每个卫星的位置的更新
-            satellite.update_position()
+            satellite.update_position(time_step=self.time_step)
 
     def update_satellite_ground_topology(self):
         """
@@ -77,7 +84,8 @@ class MaintainSystem:
                         cloest_distance = distance
                         closest_satellite = satellite
                         closest_satellite_available_gsl_ifidx = available_gsl_ifidx
-            if (ground_station.connected_satellite is None) or (ground_station.connected_satellite.container_name != closest_satellite.container_name):
+            if (ground_station.connected_satellite is None) or (
+                    ground_station.connected_satellite.container_name != closest_satellite.container_name):
                 ground_station.connected_satellite = closest_satellite
                 closest_satellite.gsl_ifindexes.use_gsl_ifidx(closest_satellite_available_gsl_ifidx)
                 ground_ifname = f"{cm.GroundStationPrefix}{ground_station.node_id}_idx{1}"

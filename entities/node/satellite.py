@@ -60,12 +60,12 @@ class Satellite(cim.CommonInfo):
         self.mobility_module = ephem.readtle(container_name, self.tle[0], self.tle[1])
         self.gsl_ifindexes = GslIfIndexes(start_gsl_ifidx=start_gsl_ifidx, available_gsls=available_gsls)
 
-    def update_position(self):
+    def update_position(self, time_step: int):
         """
         进行位置的更新
-        :return:
+        :param time_step: 时间步长
         """
-        self.start_time += timedelta(seconds=1)
+        self.start_time += timedelta(seconds=time_step)
         ephem_time = ephem.Date(self.start_time)
         self.mobility_module.compute(ephem_time)
         self.current_position = {

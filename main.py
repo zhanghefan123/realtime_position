@@ -6,6 +6,8 @@ from service.etcd import api as eam
 from service.etcd import client as ecm
 from typing import Dict, Callable
 from entities.system import maintain_system as sm
+import threading
+from queue import Queue
 
 
 def signal_handler(signum, frame):
@@ -30,9 +32,11 @@ class Starter:
         进行系统的初始化
         """
         self.config_file_path: str = ""  # 配置文件的路径
-        self.config_loader = None
+        self.config_loader: lm.Loader = None
+        self.etcd_client: ecm.EtcdClient = None
         self.etcd_api = None
         self.system = None
+        self.sync_queue = Queue(maxsize=1)
         self.start_functions: Dict[str, Callable] = {
             Starter.PARSE_CMD_ARGS: self.parse_cmd_args,
             Starter.SET_CONFIG_LOADER: self.set_config_loader,
@@ -75,8 +79,8 @@ class Starter:
         step3: 进行 etcd_client 的设置
         :return: None
         """
-        etcd_client = ecm.EtcdClient(config_loader=self.config_loader)
-        self.etcd_api = eam.EtcdApi(etcd_client=etcd_client, config_loader=self.config_loader)
+        self.etcd_client = ecm.EtcdClient(config_loader=self.config_loader)
+        self.etcd_api = eam.EtcdApi(etcd_client=self.etcd_client, config_loader=self.config_loader)
 
     def set_maintain_system(self):
         """
@@ -90,7 +94,18 @@ class Starter:
                                         etcd_api=self.etcd_api,
                                         satellites=satellites,
                                         ground_stations=ground_stations,
-                                        isls=inter_satellite_links)
+                                        isls=inter_satellite_links,
+                                        sync_queue=self.sync_queue)
+
+    def watch_configurations(self):
+        """
+        进行单独的 key 的监听
+        """
+        event_iterator, cancel = self.etcd_client.etcd_client.watch(self.config_loader.time_step_key)
+        for event in event_iterator:
+            self.system.time_step = event.value
+            self.sync_queue.put(int(event.value))
+            print(f"listen to time_step_key change: {event.value}", flush=True)
 
     def run_maintain_system(self):
         """
@@ -99,6 +114,8 @@ class Starter:
         """
         # 注册信号处理函数
         signal.signal(signal.SIGTERM, signal_handler)
+        # 创建线程
+        threading.Thread(target=self.watch_configurations, daemon=True).start()
         # 进行系统的更新
         while True:
             self.system.update()

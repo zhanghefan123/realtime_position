@@ -42,7 +42,6 @@ class EtcdApi:
                                      start_gsl_ifidx=pb_satellite.ifIdx,
                                      available_gsls=self.config_loader.satellite_available_gsls)
             satellites.append(satellite)
-            print(f"satellite ifidx = {pb_satellite.ifIdx}", flush=True)
         return satellites
 
     def load_ground_stations(self) -> List[gm.GroundStation]:
@@ -54,8 +53,6 @@ class EtcdApi:
         pbGroundStation = npb.Node()
         # 从 etcd 键值对库里拿到所有的地面站信息
         ground_stations_in_bytes = self.etcd_client.get(self.config_loader.etcd_ground_stations_prefix)
-        print("etcd ground stations prefix: ", self.config_loader.etcd_ground_stations_prefix, flush=True)
-        print("ground_stations_in_bytes: ", ground_stations_in_bytes, flush=True)
         for ground_station_in_bytes in ground_stations_in_bytes:
             pbGroundStation.ParseFromString(ground_station_in_bytes[0])
             ground_station = gm.GroundStation(node_type=pbGroundStation.type,
