@@ -1,4 +1,6 @@
 import math
+from os import close
+
 from entities.vars import consts as cm
 from entities.node import ground_station as gm
 from entities.node import satellite as sm
@@ -7,7 +9,6 @@ from typing import List
 from service.etcd import api as eam
 from config import loader as lm
 from tools import tools as tm
-from typing import Dict
 
 
 class MaintainSystem:
@@ -28,12 +29,6 @@ class MaintainSystem:
         self.satellites = satellites
         self.ground_stations = ground_stations
         self.isls = isls
-        # self.satellite_gsl_mapping = {}
-        # self.init_satellite_gsl_mapping()
-
-    # def init_satellite_gsl_mapping(self):
-    #     for satellite in self.satellites:
-    #         self.satellite_gsl_mapping[satellite.container_name] = set()
 
     def update(self):
         """
@@ -46,7 +41,7 @@ class MaintainSystem:
         # 进行所有的星间链路的更新
         self.update_isls()
         # 进行所有的星地链路的更新
-        self.update_gsls()
+        self.update_satellite_ground_topology()
         # 进行所有的接口的延迟的更新
         self.update_interfaces_delay()
 
@@ -60,64 +55,41 @@ class MaintainSystem:
             # 进行每个卫星的位置的更新
             satellite.update_position()
 
-    def update_gsls(self):
+    def update_satellite_ground_topology(self):
         """
         找到应该要进行建立的那些 gsls, 以目前的方式来说, 每个地面站选择一个最近的卫星, 卫星可能允许多个 ISL
         :return:
         """
         gsls = []
-        satellite_gsl_mapping = {}
-        # 对每个地面站进行最近卫星的寻找
-        # -----------------------------------------------------
+        for satellite in self.satellites:
+            satellite.gsl_ifindexes.set_gsl_ifidx_mapping()
         for ground_station in self.ground_stations:
-            # 最近距离
             cloest_distance = math.inf
-            # 最近卫星
             closest_satellite = None
+            closest_satellite_available_gsl_ifidx = None
             for satellite in self.satellites:
-                # 判断卫星是否已经达到了最大的连接数量
-                if ((satellite.container_name in satellite_gsl_mapping.keys()) and
-                        (len(satellite_gsl_mapping[satellite.container_name]) >= self.config_loader.satellite_available_gsls)):
-                    # 如果已经达到了最大的连接数量则继续
+                available_gsl_ifidx = satellite.gsl_ifindexes.find_available_gsl_ifidx()
+                if available_gsl_ifidx is None:
                     continue
                 else:
-                    # 计算距离
                     distance = tm.calculate_distance(source_node=ground_station, target_node=satellite)
-                    # 进行距离的比较
                     if distance < cloest_distance:
-                        # 设置最近的距离
                         cloest_distance = distance
-                        # 设置最近的卫星
                         closest_satellite = satellite
-            # 更新 mapping
-            if closest_satellite.container_name not in satellite_gsl_mapping.keys():
-                satellite_gsl_mapping[closest_satellite.container_name] = {ground_station.container_name}
-            else:
-                satellite_gsl_mapping[closest_satellite.container_name].add(ground_station.container_name)
-            # -----------------------------------------------------
-
+                        closest_satellite_available_gsl_ifidx = available_gsl_ifidx
             if (ground_station.connected_satellite is None) or (ground_station.connected_satellite.container_name != closest_satellite.container_name):
-                # 如果之前没有连接过
-
-                # step1 更新最近卫星
                 ground_station.connected_satellite = closest_satellite
-
-                # step2 创建新的星地链路
+                closest_satellite.gsl_ifindexes.use_gsl_ifidx(closest_satellite_available_gsl_ifidx)
+                ground_ifname = f"{cm.GroundStationPrefix}{ground_station.node_id}_idx{1}"
+                satellite_ifname = f"{cm.SatellitePrefix}{closest_satellite.node_id}_idx{closest_satellite_available_gsl_ifidx}"
                 gsl = lkm.Link(link_type=cm.LinkTypeGSL,
                                link_id=1,
                                band_width=100,
                                source_node=ground_station,
                                target_node=closest_satellite,
-                               source_iface_name=f"{cm.GroundStationPrefix}{ground_station.node_id}_idx{1}",
-                               # 当前给的 idx 是错误的 idx
-                               target_iface_name=f"{cm.SatellitePrefix}{closest_satellite.node_id}_idx{1}")  # 当前给的 idx 是错误的 idx
-
-                # step3 将 gsl 添加到 gsl 列表之中
+                               source_iface_name=ground_ifname,
+                               target_iface_name=satellite_ifname)
                 gsls.append(gsl)
-            else:
-                pass
-
-        # 放到 etcd 之中
         self.etcd_api.set_gsls(gsls)
 
     def update_isls(self):

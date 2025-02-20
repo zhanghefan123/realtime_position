@@ -38,8 +38,11 @@ class EtcdApi:
                                      container_name=pb_satellite.container_name,
                                      pid=pb_satellite.pid,
                                      tle=pb_satellite.tle,
-                                     start_time=self.config_loader.constellation_start_time)
+                                     start_time=self.config_loader.constellation_start_time,
+                                     start_gsl_ifidx=pb_satellite.ifIdx,
+                                     available_gsls=self.config_loader.satellite_available_gsls)
             satellites.append(satellite)
+            print(f"satellite ifidx = {pb_satellite.ifIdx}", flush=True)
         return satellites
 
     def load_ground_stations(self) -> List[gm.GroundStation]:
