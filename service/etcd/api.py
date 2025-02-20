@@ -10,7 +10,7 @@ from typing import List
 
 
 class EtcdApi:
-    def __init__(self, etcd_client: ecm.EtcdClient, config_loader: lm.Loader):
+    def __init__(self, etcd_client: ecm.EtcdClientWrapper, config_loader: lm.Loader):
         """
         根据传入的 etcd_client 初始化 etcd_api
         :param etcd_client: etcd 客户端
@@ -30,7 +30,7 @@ class EtcdApi:
         satellites: List[sm.Satellite] = []
         pb_satellite = npb.Node()
         # 从 etcd 键值对库里拿到所有卫星信息
-        satellites_in_bytes = self.etcd_client.get(self.config_loader.etcd_satellites_prefix)
+        satellites_in_bytes = self.etcd_client.get_prefix(self.config_loader.etcd_satellites_prefix)
         for satellite_in_bytes in satellites_in_bytes:
             pb_satellite.ParseFromString(satellite_in_bytes[0])
             satellite = sm.Satellite(node_type=pb_satellite.type,
@@ -52,7 +52,7 @@ class EtcdApi:
         ground_stations: List[gm.GroundStation] = []
         pbGroundStation = npb.Node()
         # 从 etcd 键值对库里拿到所有的地面站信息
-        ground_stations_in_bytes = self.etcd_client.get(self.config_loader.etcd_ground_stations_prefix)
+        ground_stations_in_bytes = self.etcd_client.get_prefix(self.config_loader.etcd_ground_stations_prefix)
         for ground_station_in_bytes in ground_stations_in_bytes:
             pbGroundStation.ParseFromString(ground_station_in_bytes[0])
             ground_station = gm.GroundStation(node_type=pbGroundStation.type,
@@ -73,7 +73,7 @@ class EtcdApi:
         """
         inter_satellite_links = []
         pbLink = lpb.Link()
-        links_in_bytes = self.etcd_client.get(self.config_loader.etcd_isls_prefix)
+        links_in_bytes = self.etcd_client.get_prefix(self.config_loader.etcd_isls_prefix)
         for link_in_bytes in links_in_bytes:
             pbLink.ParseFromString(link_in_bytes[0])
             link = lkm.Link(pbLink.type,

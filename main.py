@@ -25,6 +25,7 @@ class Starter:
     SET_CONFIG_LOADER = "set_config_loader"
     SET_ETCD_CLIENT = "set_etcd_client"
     SET_SYSTEM = "set_system"
+    RUN_TIME_STEP_WATCHER = "run_time_step_watcher"
     UPDATE_STATUS = "update_status"
 
     def __init__(self):
@@ -33,7 +34,7 @@ class Starter:
         """
         self.config_file_path: str = ""  # 配置文件的路径
         self.config_loader: lm.Loader = None
-        self.etcd_client: ecm.EtcdClient = None
+        self.etcd_client_wrapper: ecm.EtcdClientWrapper = None
         self.etcd_api = None
         self.system = None
         self.sync_queue = Queue(maxsize=1)
@@ -42,6 +43,7 @@ class Starter:
             Starter.SET_CONFIG_LOADER: self.set_config_loader,
             Starter.SET_ETCD_CLIENT: self.set_etcd_client,
             Starter.SET_SYSTEM: self.set_maintain_system,
+            Starter.RUN_TIME_STEP_WATCHER: self.run_time_step_watcher,
             Starter.UPDATE_STATUS: self.run_maintain_system,
         }
 
@@ -79,8 +81,8 @@ class Starter:
         step3: 进行 etcd_client 的设置
         :return: None
         """
-        self.etcd_client = ecm.EtcdClient(config_loader=self.config_loader)
-        self.etcd_api = eam.EtcdApi(etcd_client=self.etcd_client, config_loader=self.config_loader)
+        self.etcd_client_wrapper = ecm.EtcdClientWrapper(config_loader=self.config_loader)
+        self.etcd_api = eam.EtcdApi(etcd_client=self.etcd_client_wrapper, config_loader=self.config_loader)
 
     def set_maintain_system(self):
         """
@@ -97,11 +99,20 @@ class Starter:
                                         isls=inter_satellite_links,
                                         sync_queue=self.sync_queue)
 
+    def run_time_step_watcher(self):
+        # 先进行初始值的读取
+        # print(f"retrieved time step from etcd = {self.etcd_client_wrapper.get(self.config_loader.time_step_key)}",flush=True)
+        initial_time_step = int(self.etcd_client_wrapper.get(self.config_loader.time_step_key)[0])
+        # 进行写入
+        self.system.time_step = initial_time_step
+        # 启动线程进行读取
+        threading.Thread(target=self.watch_configurations, daemon=True).start()
+
     def watch_configurations(self):
         """
         进行单独的 key 的监听
         """
-        event_iterator, cancel = self.etcd_client.etcd_client.watch(self.config_loader.time_step_key)
+        event_iterator, cancel = self.etcd_client_wrapper.etcd_client.watch(self.config_loader.time_step_key)
         for event in event_iterator:
             self.system.time_step = event.value
             self.sync_queue.put(int(event.value))
@@ -114,8 +125,6 @@ class Starter:
         """
         # 注册信号处理函数
         signal.signal(signal.SIGTERM, signal_handler)
-        # 创建线程
-        threading.Thread(target=self.watch_configurations, daemon=True).start()
         # 进行系统的更新
         while True:
             self.system.update()
