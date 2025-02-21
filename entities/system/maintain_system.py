@@ -74,9 +74,11 @@ class MaintainSystem:
             cloest_distance = math.inf
             closest_satellite = None
             closest_satellite_available_gsl_ifidx = None
+            final_elevation_angle = None
             for satellite in self.satellites:
                 available_gsl_ifidx = satellite.gsl_ifindexes.find_available_gsl_ifidx()
-                if available_gsl_ifidx is None:
+                elevation_angle = tm.calculate_elevation(ground_station, satellite)
+                if (available_gsl_ifidx is None) or (elevation_angle < self.config_loader.minimum_elevation_angle):
                     continue
                 else:
                     distance = tm.calculate_distance(source_node=ground_station, target_node=satellite)
@@ -84,20 +86,26 @@ class MaintainSystem:
                         cloest_distance = distance
                         closest_satellite = satellite
                         closest_satellite_available_gsl_ifidx = available_gsl_ifidx
-            if (ground_station.connected_satellite is None) or (
-                    ground_station.connected_satellite.container_name != closest_satellite.container_name):
-                ground_station.connected_satellite = closest_satellite
-                closest_satellite.gsl_ifindexes.use_gsl_ifidx(closest_satellite_available_gsl_ifidx)
-                ground_ifname = f"{cm.GroundStationPrefix}{ground_station.node_id}_idx{1}"
-                satellite_ifname = f"{cm.SatellitePrefix}{closest_satellite.node_id}_idx{closest_satellite_available_gsl_ifidx}"
-                gsl = lkm.Link(link_type=cm.LinkTypeGSL,
-                               link_id=1,
-                               band_width=100,
-                               source_node=ground_station,
-                               target_node=closest_satellite,
-                               source_iface_name=ground_ifname,
-                               target_iface_name=satellite_ifname)
-                gsls.append(gsl)
+                        final_elevation_angle = elevation_angle
+
+            if closest_satellite is None:  # 一个可以连接的卫星都没有找到
+                continue
+            else:
+                if (ground_station.connected_satellite is None) or (
+                        ground_station.connected_satellite.container_name != closest_satellite.container_name):
+                    ground_station.connected_satellite = closest_satellite
+                    closest_satellite.gsl_ifindexes.use_gsl_ifidx(closest_satellite_available_gsl_ifidx)
+                    ground_ifname = f"{cm.GroundStationPrefix}{ground_station.node_id}_idx{1}"
+                    satellite_ifname = f"{cm.SatellitePrefix}{closest_satellite.node_id}_idx{closest_satellite_available_gsl_ifidx}"
+                    gsl = lkm.Link(link_type=cm.LinkTypeGSL,
+                                   link_id=1,
+                                   band_width=100,
+                                   source_node=ground_station,
+                                   target_node=closest_satellite,
+                                   source_iface_name=ground_ifname,
+                                   target_iface_name=satellite_ifname)
+                    gsls.append(gsl)
+                    print(f"connection between {ground_station.container_name} <--> {closest_satellite.container_name} with elevation angle {final_elevation_angle}", flush=True)
         self.etcd_api.set_gsls(gsls)
 
     def update_isls(self):

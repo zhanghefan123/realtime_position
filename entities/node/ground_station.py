@@ -1,6 +1,7 @@
 from entities.node import common_info as cim
 from entities.node import satellite as sm
 
+
 class GroundStation(cim.CommonInfo):
     def __init__(self, node_type: int, node_id: int,
                  container_name: str, pid: int,
