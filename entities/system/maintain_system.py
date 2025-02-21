@@ -30,6 +30,7 @@ class MaintainSystem:
         self.ground_stations = ground_stations
         self.isls = isls
         self.time_step = 1
+        self.minimum_elevation_angle = 5
         self.sync_queue = sync_queue
 
     def update(self):
@@ -78,7 +79,7 @@ class MaintainSystem:
             for satellite in self.satellites:
                 available_gsl_ifidx = satellite.gsl_ifindexes.find_available_gsl_ifidx()
                 elevation_angle = tm.calculate_elevation(ground_station, satellite)
-                if (available_gsl_ifidx is None) or (elevation_angle < self.config_loader.minimum_elevation_angle):
+                if (available_gsl_ifidx is None) or (elevation_angle < self.minimum_elevation_angle):
                     continue
                 else:
                     distance = tm.calculate_distance(source_node=ground_station, target_node=satellite)
@@ -89,7 +90,7 @@ class MaintainSystem:
                         final_elevation_angle = elevation_angle
 
             if closest_satellite is None:  # 一个可以连接的卫星都没有找到
-                continue
+                continue  # 每一次都是重新的计算, 所以当前的 ground_station.connected_satellite 必然是为空的
             else:
                 if (ground_station.connected_satellite is None) or (
                         ground_station.connected_satellite.container_name != closest_satellite.container_name):
