@@ -47,7 +47,7 @@ class Link:
         先进行距离的更新，然后计算延迟
         :return:
         """
-        self.update_distance()
+        self.distance_in_meters = self.update_distance()
         self.delay_in_ms = self.distance_in_meters / cm.LIGHT_SPEED * cm.S_TO_MS
 
     def __str__(self):

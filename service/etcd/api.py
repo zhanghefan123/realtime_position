@@ -41,7 +41,8 @@ class EtcdApi:
                                      start_time=self.config_loader.constellation_start_time,
                                      start_gsl_ifidx=pb_satellite.ifIdx,
                                      available_gsls=self.config_loader.satellite_available_gsls)
-            satellites.append(satellite)
+            satellites.insert(pb_satellite.id - 1, satellite)
+            # satellites.append(satellite)
         return satellites
 
     def load_ground_stations(self) -> List[gm.GroundStation]:
@@ -83,6 +84,7 @@ class EtcdApi:
                             satellites[pbLink.target_node_id - 1],
                             pbLink.source_iface_name,
                             pbLink.target_iface_name)
+            print(f"isl {link.source_node.container_name} <--> {link.target_node.container_name}", flush=True)
             inter_satellite_links.append(link)
         return inter_satellite_links
 
@@ -106,8 +108,10 @@ class EtcdApi:
             pb_link.target_node_id = gsl.target_node.node_id
             pb_link.source_iface_name = gsl.source_iface_name
             pb_link.target_iface_name = gsl.target_iface_name
+            pb_link.delay = gsl.delay_in_ms
             # 设置好 link in protobuf 之后放到 etcd 之中
             print(f"{self.config_loader.etcd_gsls_prefix}/{gsl.link_id}", flush=True)
+            print(f"delay {gsl.delay_in_ms}", flush=True)
             self.etcd_client.set(f"{self.config_loader.etcd_gsls_prefix}/{gsl.link_id}",
                                  pb_link.SerializeToString())
 
@@ -118,6 +122,7 @@ class EtcdApi:
         :return: None
         """
         for satellite in satellites:
+            # print(f"{satellite.container_name} -> {satellite.interface_delay_map}")
             # 创建 satellite in protobuf
             pb_satellite = npb.Node()
             pb_satellite.type = satellite.node_type
@@ -138,25 +143,29 @@ class EtcdApi:
             self.etcd_client.set(f"{self.config_loader.etcd_satellites_prefix}/{satellite.node_id}",
                                  pb_satellite.SerializeToString())
 
-    def set_ground_stations_interface_delay(self, ground_stations: List[gm.GroundStation]):
-        """
-        更新地面站接口的延迟
-        :param ground_stations: 地面站
-        :return: None
-        """
-        for ground_station in ground_stations:
-            # 创建 ground_station in protobuf
-            pb_ground_station = npb.Node()
-            pb_ground_station.type = ground_station.node_type
-            pb_ground_station.id = ground_station.node_id
-            pb_ground_station.container_name = ground_station.container_name
-            pb_ground_station.pid = ground_station.pid
-            pb_ground_station.latitude = ground_station.current_position[cm.LATITUDE_KEY]  # 这个不变可以不用设置
-            pb_ground_station.longitude = ground_station.current_position[cm.LONGITUDE_KEY]  # 这个不变可以不用设置
-            pb_ground_station.altitude = ground_station.current_position[cm.ALTITUDE_KEY]  # 这个不变可以不用设置
-            # 还有延迟没有进行设置
-            # <<等待进行完善>>
-            # 设置好 pbGroundStation 之后放到 etcd 之中
-            self.etcd_client.set(f"{self.config_loader.etcd_ground_stations_prefix}/{ground_station.node_id}",
-                                 pb_ground_station.SerializeToString())
+    # def set_ground_stations_interface_delay(self, ground_stations: List[gm.GroundStation]):
+    #     """
+    #     更新地面站接口的延迟
+    #     :param ground_stations: 地面站
+    #     :return: None
+    #     """
+    #     for ground_station in ground_stations:
+    #         # 创建 ground_station in protobuf
+    #         pb_ground_station = npb.Node()
+    #         pb_ground_station.type = ground_station.node_type
+    #         pb_ground_station.id = ground_station.node_id
+    #         pb_ground_station.container_name = ground_station.container_name
+    #         pb_ground_station.pid = ground_station.pid
+    #         pb_ground_station.latitude = ground_station.current_position[cm.LATITUDE_KEY]  # 这个不变可以不用设置
+    #         pb_ground_station.longitude = ground_station.current_position[cm.LONGITUDE_KEY]  # 这个不变可以不用设置
+    #         pb_ground_station.altitude = ground_station.current_position[cm.ALTITUDE_KEY]  # 这个不变可以不用设置
+    #         # 构建 interrface_delays
+    #         interface_delays = []
+    #         for interface_name in ground_station.interface_delay_map.keys():
+    #             interface_delay = f"{interface_name}:{ground_station.interface_delay_map[interface_name]}"
+    #             interface_delays.append(interface_delay)
+    #         pb_ground_station.interface_delay.extend(interface_delays)
+    #         # 设置好 pbGroundStation 之后放到 etcd 之中
+    #         self.etcd_client.set(f"{self.config_loader.etcd_ground_stations_prefix}/{ground_station.node_id}",
+    #                              pb_ground_station.SerializeToString())
     # --------------------------------------------------------------------------------------------
