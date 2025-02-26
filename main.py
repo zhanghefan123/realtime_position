@@ -55,7 +55,7 @@ class Starter:
         :return None
         """
         for index, key in enumerate(self.start_functions.keys()):
-            print(f"step {index + 1}: {key}")
+            # print(f"step {index + 1}: {key}")
             corresponding_function = self.start_functions[key]
             corresponding_function()
 
@@ -119,7 +119,7 @@ class Starter:
         for event in event_iterator:
             self.system.time_step = event.value
             self.sync_queue.put(int(event.value))
-            print(f"listen to time_step_key change: {event.value}", flush=True)
+            # print(f"listen to time_step_key change: {event.value}", flush=True)
 
     def run_maintain_system(self):
         """

@@ -90,9 +90,23 @@ class MaintainSystem:
                         final_elevation_angle = elevation_angle
 
             if closest_satellite is None:  # 一个可以连接的卫星都没有找到
-                continue  # 每一次都是重新的计算, 所以当前的 ground_station.connected_satellite 必然是为空的
+                print("cannot find single satellite", flush=True)
+                if ground_station.connected_satellite is not None:
+                    ground_ifname = f"{cm.GroundStationPrefix}{ground_station.node_id}_idx{1}"
+                    gsl = lkm.Link(link_type=cm.LinkTypeGSL,
+                                   link_id=-1,
+                                   band_width=100,
+                                   source_node=ground_station,
+                                   target_node=ground_station.connected_satellite,
+                                   source_iface_name=ground_ifname,
+                                   target_iface_name=f"{cm.SatellitePrefix}{ground_station.connected_satellite.node_id}_idx{ground_station.connected_satellite_ifidx}")
+                    gsls.append(gsl)
+                    print("connection between ground station and satellite is broken", flush=True)
+                else:
+                    continue  # 每一次都是重新的计算, 所以当前的 ground_station.connected_satellite 必然是为空的
             else:
                 ground_station.connected_satellite = closest_satellite
+                ground_station.connected_satellite_ifidx = closest_satellite_available_gsl_ifidx
                 closest_satellite.gsl_ifindexes.use_gsl_ifidx(closest_satellite_available_gsl_ifidx)
                 ground_ifname = f"{cm.GroundStationPrefix}{ground_station.node_id}_idx{1}"
                 satellite_ifname = f"{cm.SatellitePrefix}{closest_satellite.node_id}_idx{closest_satellite_available_gsl_ifidx}"
@@ -110,14 +124,16 @@ class MaintainSystem:
                 gsl.target_node.interface_delay_map[gsl.target_iface_name] = gsl.delay_in_ms
                 # -------------------------------------------------
                 gsls.append(gsl)
-                print(f"connection between {ground_station.container_name} <--> {closest_satellite.container_name} with elevation angle {final_elevation_angle}", flush=True)
+                # print(f"connection between {ground_station.container_name} <--> {closest_satellite.container_name} with elevation angle {final_elevation_angle}", flush=True)
         self.etcd_api.set_gsls(gsls)
 
-        # 将 old gsl 之中节点存储的延迟信息删除
+        # 将 gsl 之中节点存储的延迟信息删除
         # ---------------------------------
         for gsl in gsls:
-            del gsl.source_node.interface_delay_map[gsl.source_iface_name]
-            del gsl.target_node.interface_delay_map[gsl.target_iface_name]
+            # 仅仅添加设置了 gsl 的
+            if -1 != gsl.link_id:
+                del gsl.source_node.interface_delay_map[gsl.source_iface_name]
+                del gsl.target_node.interface_delay_map[gsl.target_iface_name]
         # ---------------------------------
 
     def update_isls(self):

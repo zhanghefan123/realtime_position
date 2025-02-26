@@ -5,9 +5,11 @@ from queue import Queue
 shared_data = None
 sync_queue = Queue(maxsize=1)
 try:
-    print(sync_queue.get(block=False))
+    # print(sync_queue.get(block=False))
+    pass
 except Exception as e:
-    print("hello", flush=True)
+    # print("hello", flush=True)
+    pass
 
 
 

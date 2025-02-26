@@ -84,7 +84,7 @@ class EtcdApi:
                             satellites[pbLink.target_node_id - 1],
                             pbLink.source_iface_name,
                             pbLink.target_iface_name)
-            print(f"isl {link.source_node.container_name} <--> {link.target_node.container_name}", flush=True)
+            # print(f"isl {link.source_node.container_name} <--> {link.target_node.container_name}", flush=True)
             inter_satellite_links.append(link)
         return inter_satellite_links
 
@@ -102,7 +102,7 @@ class EtcdApi:
             # 创建 link in protobuf
             pb_link = lpb.Link()
             pb_link.type = cm.LinkTypeGSL
-            pb_link.link_id = gsl.link_type  # 这个始终为 1
+            pb_link.link_id = gsl.link_id
             pb_link.bandwidth = gsl.bandwidth
             pb_link.source_node_id = gsl.source_node.node_id
             pb_link.target_node_id = gsl.target_node.node_id
@@ -110,8 +110,8 @@ class EtcdApi:
             pb_link.target_iface_name = gsl.target_iface_name
             pb_link.delay = gsl.delay_in_ms
             # 设置好 link in protobuf 之后放到 etcd 之中
-            print(f"{self.config_loader.etcd_gsls_prefix}/{gsl.link_id}", flush=True)
-            print(f"delay {gsl.delay_in_ms}", flush=True)
+            # print(f"{self.config_loader.etcd_gsls_prefix}/{gsl.link_id}", flush=True)
+            # print(f"delay {gsl.delay_in_ms}", flush=True)
             self.etcd_client.set(f"{self.config_loader.etcd_gsls_prefix}/{gsl.link_id}",
                                  pb_link.SerializeToString())
 

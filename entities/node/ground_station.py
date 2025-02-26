@@ -11,3 +11,4 @@ class GroundStation(cim.CommonInfo):
                          latitude=latitude, longitude=longitude, altitude=altitude)
         # 用来存储连接的卫星
         self.connected_satellite: sm.Satellite = None
+        self.connected_satellite_ifidx = None
