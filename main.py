@@ -37,7 +37,7 @@ class Starter:
         self.config_loader: lm.Loader = None
         self.etcd_client_wrapper: ecm.EtcdClientWrapper = None
         self.etcd_api = None
-        self.system = None
+        self.maintain_system = None
         self.sync_queue = Queue(maxsize=1)
         self.start_functions: Dict[str, Callable] = {
             Starter.PARSE_CMD_ARGS: self.parse_cmd_args,
@@ -94,18 +94,18 @@ class Starter:
         satellites = self.etcd_api.load_satellites()
         ground_stations = self.etcd_api.load_ground_stations()
         inter_satellite_links = self.etcd_api.load_isls(satellites)
-        self.system = sm.MaintainSystem(config_loader=self.config_loader,
-                                        etcd_api=self.etcd_api,
-                                        satellites=satellites,
-                                        ground_stations=ground_stations,
-                                        isls=inter_satellite_links,
-                                        sync_queue=self.sync_queue)
+        self.maintain_system = sm.MaintainSystem(config_loader=self.config_loader,
+                                                 etcd_api=self.etcd_api,
+                                                 satellites=satellites,
+                                                 ground_stations=ground_stations,
+                                                 isls=inter_satellite_links,
+                                                 sync_queue=self.sync_queue)
 
     def load_init_config_from_etcd(self):
         initial_time_step = int(self.etcd_client_wrapper.get(self.config_loader.time_step_key)[0])
         initial_minimum_elevation_angle = int(self.etcd_client_wrapper.get(self.config_loader.minimum_elevation_angle_key)[0])
-        self.system.time_step = initial_time_step
-        self.system.minimum_elevation_angle = initial_minimum_elevation_angle
+        self.maintain_system.time_step = initial_time_step
+        self.maintain_system.minimum_elevation_angle = initial_minimum_elevation_angle
 
     def run_time_step_watcher(self):
         # 启动线程进行读取
@@ -117,7 +117,7 @@ class Starter:
         """
         event_iterator, cancel = self.etcd_client_wrapper.etcd_client.watch(self.config_loader.time_step_key)
         for event in event_iterator:
-            self.system.time_step = event.value
+            self.maintain_system.time_step = event.value
             self.sync_queue.put(int(event.value))
             # print(f"listen to time_step_key change: {event.value}", flush=True)
 
@@ -128,9 +128,16 @@ class Starter:
         """
         # 注册信号处理函数
         signal.signal(signal.SIGTERM, signal_handler)
+        # 进行总的更新次数的计算
+        count = 0
         # 进行系统的更新
         while True:
-            self.system.update()
+            # 如果设置了不进行位置的更新, 那么只需要更新10次就停止
+            if count > 10 and (self.config_loader.update_position == "false"):
+                pass
+            else:
+                self.maintain_system.update()
+                count += 1
             time.sleep(self.config_loader.position_update_interval)
 
 

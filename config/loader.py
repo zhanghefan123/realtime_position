@@ -19,8 +19,9 @@ class Loader:
         self.constellation_start_time = None  # 星座启动时间
         self.position_update_interval = None  # 更新时间
         self.satellite_available_gsls: int = 0  # 卫星可用于星地链路的接口的数量
-        self.time_step_key = None
-        self.minimum_elevation_angle_key = None
+        self.time_step_key = None  # 时间步长
+        self.minimum_elevation_angle_key = None  # 最小仰角
+        self.update_position = None  # 是否进行位置的更新 (如果不进行位置的更新的话, 那么只需要更新10次就停止)
 
     def load_from_env(self):
         """
@@ -39,6 +40,7 @@ class Loader:
         self.satellite_available_gsls = int(os.getenv("SATELLITE_AVAILABLE_GSLS"))
         self.time_step_key = os.getenv("TIME_STEP_KEY")
         self.minimum_elevation_angle_key = os.getenv("MINIMUM_ELEVATION_ANGLE_KEY")
+        self.update_position = os.getenv("UPDATE_POSITION")
 
     def resolve_constellation_start_time(self):
         """
